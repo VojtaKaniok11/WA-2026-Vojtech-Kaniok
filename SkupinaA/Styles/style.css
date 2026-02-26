@@ -1,8 +1,42 @@
 body {
   font-size: Arial, Helvetica, sans-serif;
+  background-color: aliceblue;
 }
 
 p {
   font-family: 'Times New Roman', Times, serif;
   font-size: 18px;
+}
+
+h1 {
+  font-size: 36px;
+  color: brown;
+  margin: unset;
+}
+
+header,
+footer {
+  background-color: lightskyblue;
+  padding: 0.5rem;
+}
+.page-wrapper {
+  width: 90%;
+  margin: 0 auto;
+}
+nav ul {
+  display: flex;
+  list-style-type: none;
+  gap: 0.5rem;
+}
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.card {
+  background-color: rgb(172, 221, 231);
+  padding: 1rem;
+  border-radius: 10px;
+  /*margin-top: 1rem;*/
+  border: solid 2px orange;
 }
