@@ -12,7 +12,7 @@ $baseDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 define('BASE_URL', $baseDir);
 echo ($baseDir);
 
-
+//has
 
 // Načtení třídy routeru, která se postará o zpracování URL
 require_once '../core/App.php';
