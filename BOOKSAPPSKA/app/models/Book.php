@@ -17,9 +17,9 @@ class Book {
     public function create($data) {
         // SQL dotaz pro vložení všech dostupných dat z formuláře
         $query = "INSERT INTO " . $this->table_name . " 
-                 (title, author, isbn, category, subcategory, year, price, link, description) 
+                 (title, author, isbn, category, subcategory, year, price, link, description, images) 
                  VALUES 
-                 (:title, :author, :isbn, :category, :subcategory, :year, :price, :link, :description)";
+                 (:title, :author, :isbn, :category, :subcategory, :year, :price, :link, :description, :images)";
         
         $stmt = $this->conn->prepare($query);
 
@@ -27,6 +27,11 @@ class Book {
         $clean_data = array_map(function($item) {
             return htmlspecialchars(strip_tags($item));
         }, $data);
+
+        // Názvy obrázků ve formátu JSON chceme uchovat nezměněné, takže přepíšeme htmlspecialchars
+        if (isset($data['images'])) {
+            $clean_data['images'] = $data['images'];
+        }
 
         // Navázání hodnot
         $stmt->bindParam(":title", $clean_data['title']);
@@ -38,6 +43,7 @@ class Book {
         $stmt->bindParam(":price", $clean_data['price']);
         $stmt->bindParam(":link", $clean_data['link']);
         $stmt->bindParam(":description", $clean_data['description']);
+        $stmt->bindParam(":images", $clean_data['images']);
 
         if($stmt->execute()) {
             return true;
@@ -81,17 +87,28 @@ class Book {
      * Upraví existující záznam knihy
      */
     public function update($id, $data) {
+        // Změna: přidáno images
         $query = "UPDATE " . $this->table_name . " SET 
                   title = :title, author = :author, isbn = :isbn, category = :category, 
                   subcategory = :subcategory, year = :year, price = :price, 
-                  link = :link, description = :description 
-                  WHERE id = :id";
+                  link = :link, description = :description";
+        
+        // Pokud byly nahrány nové obrázky (pole není prázdné nebo null), aktualizujeme je také.
+        // Tím zabráníme smazání starých obrázků, pokud uživatel pro úpravu nenahrál nové.
+        if (isset($data['images']) && $data['images'] !== "[]") {
+            $query .= ", images = :images";
+        }
+        $query .= " WHERE id = :id";
         
         $stmt = $this->conn->prepare($query);
 
         $clean_data = array_map(function($item) {
             return htmlspecialchars(strip_tags($item));
         }, $data);
+
+        if (isset($data['images'])) {
+            $clean_data['images'] = $data['images'];
+        }
 
         $stmt->bindParam(":title", $clean_data['title']);
         $stmt->bindParam(":author", $clean_data['author']);
@@ -102,6 +119,12 @@ class Book {
         $stmt->bindParam(":price", $clean_data['price']);
         $stmt->bindParam(":link", $clean_data['link']);
         $stmt->bindParam(":description", $clean_data['description']);
+        
+        if (isset($data['images']) && $data['images'] !== "[]") {
+            $stmt->bindParam(":images", $clean_data['images']);
+        }
+        
+        $stmt->bindParam(":id", $id);
         $stmt->bindParam(":id", $id);
 
         return $stmt->execute();

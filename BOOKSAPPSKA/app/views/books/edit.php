@@ -1,14 +1,5 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Úprava knihy</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        
+<?php require_once __DIR__ . '/../header.php'; ?>
+
         <div class="card" style="max-width: 800px; margin: 0 auto;">
             <div class="header">
                 <div>
@@ -56,6 +47,29 @@
                         <label for="description">Popis knihy</label>
                         <textarea id="description" name="description" rows="5"><?= htmlspecialchars($book['description'] ?? '') ?></textarea>
                     </div>    
+                    <div class="form-group full-width">
+                        <label>Obrázky</label>
+                        <?php
+                            if (!empty($book['images']) && $book['images'] !== '[]') {
+                                $existingImages = json_decode($book['images'], true);
+                                if (is_array($existingImages) && count($existingImages) > 0) {
+                                    echo '<div style="margin-bottom:10px; padding:10px; background:#f1f5f9; border-radius:6px;">';
+                                    echo '<strong>Aktuálně uložené obrázky:</strong><ul style="margin-left: 20px; list-style-type: disc;">';
+                                    foreach ($existingImages as $img) {
+                                        echo '<li>' . htmlspecialchars($img) . '</li>';
+                                    }
+                                    echo '</ul>';
+                                    echo '<small style="color:var(--warning); font-weight:bold;">Upozornění: Pokud nyní nahrajete nové soubory, tyto staré budou přepsány.</small>';
+                                    echo '</div>';
+                                }
+                            }
+                        ?>
+                        <label class="file-upload">
+                            <span class="file-upload-text">Klikni pro výběr souborů pro přepsání starých</span>
+                            <span class="file-upload-subtext">JPG / PNG / WebP – můžete vybrat více souborů najednou</span>
+                            <input type="file" id="images" name="images[]" multiple accept="image/*">
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-actions">
@@ -65,6 +79,4 @@
             </form>
         </div>
 
-    </div>
-</body>
-</html>
+<?php require_once __DIR__ . '/../footer.php'; ?>

@@ -1,28 +1,19 @@
 <?php
-// Fallback protection pro přímý vstup (pokud bys chtěl zobrazit surově jako minule)
-$is_public = true;
+// Fallback protection pro přímý vstup
 if (!isset($book)) {
-    // Pro ukázku detailu napřímo mimo MVC musíme mít ID, to většinou nemáme, tak vypíšeme jen chybové hlášení
     die("Detail nelze otevřít napřímo bez zadaného ID. Vstupte prosím přes odkaz 'Detail' v seznamu knih.");
 }
+
+require_once __DIR__ . '/../header.php';
 ?>
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detail knihy</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .detail-row { display: flex; padding: 1rem 0; border-bottom: 1px solid var(--border); }
-        .detail-row:last-child { border-bottom: none; }
-        .detail-label { font-weight: 600; width: 30%; color: var(--text-muted); }
-        .detail-value { width: 70%; color: var(--text-main); font-size: 1.05rem; }
-        .detail-desc { margin-top: 10px; padding: 15px; background: #f8fafc; border-radius: 8px; font-style: italic; color: #475569; }
-    </style>
-</head>
-<body>
-    <div class="container">
+<style>
+    .detail-row { display: flex; padding: 1rem 0; border-bottom: 1px solid var(--border); }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-weight: 600; width: 30%; color: var(--text-muted); }
+    .detail-value { width: 70%; color: var(--text-main); font-size: 1.05rem; }
+    .detail-desc { margin-top: 10px; padding: 15px; background: #f8fafc; border-radius: 8px; font-style: italic; color: #475569; }
+</style>
+
         <div class="card" style="max-width: 800px; margin: 0 auto;">
             
             <div class="header">
@@ -88,6 +79,5 @@ if (!isset($book)) {
             </div>
 
         </div>
-    </div>
-</body>
-</html>
+
+<?php require_once __DIR__ . '/../footer.php'; ?>

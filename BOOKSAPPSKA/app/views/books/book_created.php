@@ -1,14 +1,5 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Přidat knihu</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        
+<?php require_once __DIR__ . '/../header.php'; ?>
+
         <div class="card" style="max-width: 800px; margin: 0 auto;">
             <div class="header">
                 <div>
@@ -74,6 +65,4 @@
             </form>
         </div>
 
-    </div>
-</body>
-</html>
+<?php require_once __DIR__ . '/../footer.php'; ?>

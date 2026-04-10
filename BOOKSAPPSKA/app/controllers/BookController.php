@@ -1,15 +1,17 @@
 <?php
 require_once __DIR__ . '/../models/Book.php';
 
-class BookController {
+class BookController
+{
 
     /**
      * Výchozí metoda, která zobrazí seznam všech knih
      */
-    public function index() {
+    public function index()
+    {
         $book = new Book();
         $books = $book->getAll(); // Získáme všechny knihy z DB
-        
+
         // Načteme pohled pro zobrazení (seznam knih)
         require_once __DIR__ . '/../views/books/index.php';
     }
@@ -17,7 +19,8 @@ class BookController {
     /**
      * Metoda pro zobrazení formuláře na přidání knihy
      */
-    public function create() {
+    public function create()
+    {
         // Načteme existující pohled s formulářem
         require_once __DIR__ . '/../views/books/book_created.php';
     }
@@ -25,11 +28,11 @@ class BookController {
     /**
      * Metoda pro zpracování odeslaného formuláře
      */
-    public function store() {
+    public function store()
+    {
         // 1. Kontrola, zda byla data odeslána přes POST
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            
-            // 2. Načtení všech dat z pole $_POST
+
             $data = [
                 'title' => trim($_POST['title'] ?? ''),
                 'author' => trim($_POST['author'] ?? ''),
@@ -42,15 +45,20 @@ class BookController {
                 'description' => trim($_POST['description'] ?? '')
             ];
 
+            // Nahrání obrázků a přidání do dat pod klíčem 'images'
+            $uploadedImages = $this->processImageUploads();
+            $data['images'] = json_encode($uploadedImages);
+
+
             // 3. Základní validace vstupů podle povinných oken z formuláře
             if (!empty($data['title']) && !empty($data['author']) && !empty($data['year'])) {
-                
+
                 // Vytvoření instance modelu Book
                 $book = new Book();
-                
+
                 // 4. Zavolání metody modelu s celým polem
                 if ($book->create($data)) {
-                    
+
                     echo "<div style='color: green; margin: 20px 0; font-weight: bold;'>";
                     echo "Kniha byla úspěšně přidána do databáze (včetně všech dodatečných údajů)!";
                     echo "</div>";
@@ -71,10 +79,11 @@ class BookController {
     /**
      * Smazání konkrétní knihy
      */
-    public function delete($id = null) {
+    public function delete($id = null)
+    {
         if ($id) {
             $book = new Book();
-            if($book->delete($id)) {
+            if ($book->delete($id)) {
                 // Přesměrování probíhá javascriptem (alternativa za hlavičky)
                 echo "<script>alert('Záznam byl úspěšně smazán!'); window.location.href='?url=book/index';</script>";
             } else {
@@ -86,7 +95,8 @@ class BookController {
     /**
      * Zobrazení detailu jedné konkrétní knihy
      */
-    public function show($id = null) {
+    public function show($id = null)
+    {
         if ($id) {
             $bookModel = new Book();
             $book = $bookModel->getById($id); // Model už tuto metodu má
@@ -104,7 +114,8 @@ class BookController {
     /**
      * Zobrazení formuláře s už vyplněnými daty pro editaci (Úprava knihy)
      */
-    public function edit($id = null) {
+    public function edit($id = null)
+    {
         if ($id) {
             $bookModel = new Book();
             $book = $bookModel->getById($id); // Získáme konkrétní knihu
@@ -120,7 +131,8 @@ class BookController {
     /**
      * Zpracování úpravy po odeslání edit formuláře
      */
-    public function update($id = null) {
+    public function update($id = null)
+    {
         if ($_SERVER["REQUEST_METHOD"] == "POST" && $id) {
             $data = [
                 'title' => trim($_POST['title'] ?? ''),
@@ -134,9 +146,30 @@ class BookController {
                 'description' => trim($_POST['description'] ?? '')
             ];
 
+            // Zpracování nových obrázků
+            $uploadedImages = $this->processImageUploads();
+
+            // ÚKOL 1: Ochrana proti přepsání starých fotek (pokud žádné nové nenahrajeme)
+            if (empty($uploadedImages)) {
+                $bookModel = new Book();
+                $existingBook = $bookModel->getById($id); // sáhneme do databáze
+                
+                // Zkontrolujeme, zda má kniha uložené nějaké obrázky (jako JSON)
+                if (!empty($existingBook['images']) && $existingBook['images'] !== '[]') {
+                    // Převedeme JSON řetězec zpět na pole a vložíme do proměnné
+                    $decoded = json_decode($existingBook['images'], true);
+                    if (is_array($decoded)) {
+                         $uploadedImages = $decoded;
+                    }
+                }
+            }
+
+            $data['images'] = json_encode($uploadedImages);
+
+
             if (!empty($data['title']) && !empty($data['author']) && !empty($data['year'])) {
                 $bookModel = new Book();
-                
+
                 if ($bookModel->update($id, $data)) {
                     echo "<div style='color: green; margin: 20px 0; font-weight: bold;'>";
                     echo "Úprava proběhla úspěšně! Záznam byl změněn.";
@@ -152,5 +185,52 @@ class BookController {
         } else {
             echo "Neplatný požadavek.";
         }
+    }
+
+    // --- Pomocná metoda pro zpracování nahrávání obrázků ---
+    protected function processImageUploads() {
+        $uploadedFiles = [];
+        
+        // Cesta ke složce, kam se budou obrázky fyzicky ukládat (relativně od index.php)
+        $uploadDir = __DIR__ . '/../../public/uploads/'; 
+        
+        // Zkontrolujeme, zda vůbec existuje adresář, pokud ne, vytvoříme ho
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        // Zkontrolujeme, zda byl odeslán alespoň jeden soubor
+        if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
+            $fileCount = count($_FILES['images']['name']);
+
+            for ($i = 0; $i < $fileCount; $i++) {
+                // Pokud při nahrávání tohoto konkrétního souboru nedošlo k chybě
+                if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
+                    
+                    $tmpName = $_FILES['images']['tmp_name'][$i];
+                    $originalName = basename($_FILES['images']['name'][$i]);
+                    // Zjištění koncovky (např. jpg, png)
+                    $fileExtension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                    // Můžeme zde přidat i kontrolu povolených formátů (volitelné)
+                    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+                    if (!in_array($fileExtension, $allowedExtensions)) {
+                        continue; // Přeskočíme nepodporovaný soubor
+                    }
+
+                    // 1. Vygenerování unikátního jména pomocí aktuálního času a náhodného řetězce
+                    // např: book_64a2b1c_8f2a.jpg
+                    $newName = 'book_' . uniqid() . '_' . substr(md5(mt_rand()), 0, 4) . '.' . $fileExtension;
+                    $targetFilePath = $uploadDir . $newName;
+
+                    // 2. Fyzický přesun souboru z dočasné paměti do naší složky uploads
+                    if (move_uploaded_file($tmpName, $targetFilePath)) {
+                        // 3. Uložení POUZE NÁZVU do pole, které pak pošleme databázi
+                        $uploadedFiles[] = $newName; 
+                    }
+                }
+            }
+        }
+        return $uploadedFiles;
     }
 }
