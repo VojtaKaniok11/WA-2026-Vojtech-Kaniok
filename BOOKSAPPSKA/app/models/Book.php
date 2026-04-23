@@ -14,12 +14,12 @@ class Book {
     /**
      * Metoda pro vložení nové knihy do databáze (s rozšířenými položkami)
      */
-    public function create($data) {
+    public function create($data, $userId) {
         // SQL dotaz pro vložení všech dostupných dat z formuláře
         $query = "INSERT INTO " . $this->table_name . " 
-                 (title, author, isbn, category, subcategory, year, price, link, description, images) 
+                 (title, author, isbn, category, subcategory, year, price, link, description, images, created_by) 
                  VALUES 
-                 (:title, :author, :isbn, :category, :subcategory, :year, :price, :link, :description, :images)";
+                 (:title, :author, :isbn, :category, :subcategory, :year, :price, :link, :description, :images, :created_by)";
         
         $stmt = $this->conn->prepare($query);
 
@@ -44,6 +44,7 @@ class Book {
         $stmt->bindParam(":link", $clean_data['link']);
         $stmt->bindParam(":description", $clean_data['description']);
         $stmt->bindParam(":images", $clean_data['images']);
+        $stmt->bindParam(":created_by", $userId);
 
         if($stmt->execute()) {
             return true;

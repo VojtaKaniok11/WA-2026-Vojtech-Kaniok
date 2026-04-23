@@ -53,8 +53,10 @@ if (!isset($books)) {
                                 <td>
                                     <div class="actions">
                                         <a href="<?= $baseUrl ?>book/show/<?= htmlspecialchars($b['id']) ?>" class="btn btn-sm btn-primary" style="background:#0dcaf0; color:black; border:none;">Detail</a>
+                                        <?php if(isset($_SESSION['user_id']) && $_SESSION['user_id'] == ($b['created_by'] ?? null)): ?>
                                         <a href="<?= $baseUrl ?>book/edit/<?= htmlspecialchars($b['id']) ?>" class="btn btn-sm btn-warning">Upravit</a>
                                         <a href="<?= $baseUrl ?>book/delete/<?= htmlspecialchars($b['id']) ?>" class="btn btn-sm btn-danger" onclick="return confirm('Opravdu smazat?');">Smazat</a>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

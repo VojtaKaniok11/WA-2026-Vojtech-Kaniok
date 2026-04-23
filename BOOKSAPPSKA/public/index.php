@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 // Pro účely výuky a ladění na lokálním serveru (např. XAMPP) 
 // je vhodné zapnout kompletní zobrazování chyb.

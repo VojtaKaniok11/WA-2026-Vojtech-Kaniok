@@ -25,11 +25,12 @@ body {
   background-color: var(--bg-color);
   color: var(--text-main);
   line-height: 1.6;
-  padding: 2rem;
+  padding: 0.5rem;
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -52,7 +53,7 @@ body {
   background: var(--card-bg);
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  padding: 2rem;
+  padding: 1rem;
 }
 
 /* Typography */
@@ -120,18 +121,18 @@ p.subtitle {
 table {
   width: 100%;
   border-collapse: collapse;
-  white-space: nowrap;
 }
 th, td {
-  padding: 1rem;
+  padding: 0.5rem 0.4rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
 }
 th {
   background-color: transparent;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -171,6 +172,8 @@ label span {
 
 input[type="text"],
 input[type="number"],
+input[type="email"],
+input[type="password"],
 textarea {
   width: 100%;
   padding: 0.75rem 1rem;

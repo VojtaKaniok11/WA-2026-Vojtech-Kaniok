@@ -72,11 +72,26 @@ require_once __DIR__ . '/../header.php';
                         <?= nl2br(htmlspecialchars($book['description'] ?? 'Popis není k dispozici.')) ?>
                     </div>
                 </div>
+                <?php 
+                $images = !empty($book['images']) ? json_decode($book['images'], true) : [];
+                if (!empty($images) && is_array($images)): 
+                ?>
+                <div class="detail-row" style="flex-direction: column;">
+                    <div class="detail-label" style="width:100%; margin-bottom:10px;">Fotografie knihy</div>
+                    <div class="detail-value" style="width:100%; display: flex; flex-wrap: wrap; gap: 15px;">
+                        <?php foreach($images as $img): ?>
+                            <img src="<?= $baseUrl ?>/uploads/<?= htmlspecialchars($img) ?>" alt="Fotografie knihy" style="max-height: 250px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
 
+            <?php if(isset($_SESSION['user_id']) && $_SESSION['user_id'] == ($book['created_by'] ?? null)): ?>
             <div class="form-actions" style="justify-content: flex-end;">
                 <a href="?url=book/edit/<?= htmlspecialchars($book['id']) ?>" class="btn btn-warning" style="color:black;">Začít úpravu knihy</a>
             </div>
+            <?php endif; ?>
 
         </div>
 

@@ -14,9 +14,9 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : $baseDir;
         .site-header {
             background-color: var(--primary);
             color: white;
-            padding: 1rem 2rem;
+            padding: 0.75rem 1.25rem;
             border-radius: 12px;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -57,9 +57,22 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : $baseDir;
         <!-- Hlavní navigace -->
         <header class="site-header">
             <a href="?url=book/index" class="brand">📚 Knihovna App</a>
-            <nav>
-                <a href="?url=book/index">Přehled knih</a>
-                <a href="?url=book/create">Přidat knihu</a>
+            <nav style="display: flex; align-items: center;">
+                <a href="<?= $baseUrl ?>/index.php">Přehled knih</a>
+                <a href="<?= $baseUrl ?>/index.php?url=book/create">Přidat knihu</a>
+
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <span style="margin-left: 1.5rem; font-size: 0.9rem; color: #cbd5e1;"> 
+                        Ahoj, <strong style="color: white; font-weight: 600;"><?= htmlspecialchars($_SESSION['user_name'] ?? '') ?></strong>
+                    </span>
+                    <a href="<?= $baseUrl ?>/index.php?url=auth/logout" style="color: #fca5a5; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em;">
+                        Odhlásit
+                    </a>
+
+                <?php else: ?>
+                    <a href="<?= $baseUrl ?>/index.php?url=auth/login">Přihlásit</a>
+                    <a href="<?= $baseUrl ?>/index.php?url=auth/register">Registrace</a>
+                <?php endif; ?>
             </nav>
         </header>
 
