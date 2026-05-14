@@ -1,0 +1,699 @@
+================================================================================
+  DOKUMENTACE WEBOVÉ APLIKACE – MOJE FOTBALOVÉ KLUBY
+  Autor: Vojtěch Kaniok
+  Ke zkoušce z předmětu Webové Aplikace (WA)
+================================================================================
+
+================================================================================
+1. ARCHITEKTURA – CO JE TO MVC
+================================================================================
+
+Aplikace používá vzor MVC (Model-View-Controller).
+Tento vzor rozděluje aplikaci do tří vrstev:
+
+  MODEL       = Třída, která komunikuje s databází. Obsahuje SQL dotazy.
+                Neví nic o tom, jak se data zobrazí uživateli.
+
+  VIEW        = PHP soubor (HTML šablona), který zobrazuje data uživateli.
+                Neobsahuje žádnou logiku – jen vypisuje proměnné.
+
+  CONTROLLER  = PHP třída, která řídí celý průběh akce. Zavolá model,
+                získá data, ověří oprávnění a předá data do view.
+
+Proč MVC?
+  - Každá část má jasnou zodpovědnost – snazší úpravy a ladění chyb.
+  - Model lze znovu použít ve více controllerech.
+  - View lze vyměnit, aniž se změní logika.
+
+
+================================================================================
+2. STRUKTURA SOUBORŮ
+================================================================================
+
+  public/
+    index.php           --> Vstupní bod aplikace (jediná stránka na webu)
+    style.css           --> Styly celého webu
+    setup_admin.php     --> Jednorázový instalační skript (smaž po spuštění)
+    img/
+      logo.svg          --> Logo aplikace (SVG vektorová grafika)
+
+  core/
+    App.php             --> Router – zpracovává URL a rozhoduje, co se spustí
+
+  app/
+    controllers/
+      AuthController.php    --> Přihlášení, registrace, odhlášení
+      TeamController.php    --> CRUD operace s oblíbenými týmy
+      UserController.php    --> CRUD profilu, komentáře, správa uživatelů
+
+    models/
+      Database.php      --> Připojení k MySQL databázi přes PDO
+      User.php          --> Dotazy nad tabulkou users
+      Team.php          --> Dotazy nad tabulkou favorite_teams
+      Comment.php       --> Dotazy nad tabulkou user_comments
+
+    views/
+      header.php        --> Hlavička (logo, navigace) – include do každé stránky
+      footer.php        --> Patička – include do každé stránky
+      auth/
+        login.php       --> Přihlašovací formulář
+        register.php    --> Registrační formulář
+      teams/
+        index.php       --> Tabulka oblíbených týmů
+        show.php        --> Detail jednoho týmu
+        create.php      --> Formulář pro přidání týmu
+        edit.php        --> Formulář pro úpravu týmu
+      users/
+        index.php       --> Seznam všech uživatelů
+        show.php        --> Profil uživatele + komentáře
+        edit.php        --> Formulář pro editaci profilu
+        edit_comment.php --> Formulář pro úpravu komentáře
+
+  database.sql          --> SQL schéma databáze (pro vytvoření tabulek)
+
+
+================================================================================
+3. JAK FUNGUJE ROUTING (URL → kód)
+================================================================================
+
+Aplikace má jeden vstupní bod: public/index.php
+Veškerý provoz jde přes tuto stránku pomocí parametru ?url=...
+
+Příklad URL:
+  index.php?url=team/create
+           ↓
+  App.php vezme hodnotu "team/create" a rozdělí ji podle lomítka:
+    - První část: "team"  → hledá soubor TeamController.php
+    - Druhá část: "create" → hledá metodu create() uvnitř controlleru
+    - Třetí část (pokud existuje): ID nebo parametr → předá jako argument
+
+Ukázky URL a co dělají:
+  ?url=team/index          → TeamController::index()        – seznam mých týmů
+  ?url=team/create         → TeamController::create()       – formulář přidat tým
+  ?url=team/store          → TeamController::store()        – uloží nový tým do DB
+  ?url=team/edit/5         → TeamController::edit(5)        – formulář upravit tým č.5
+  ?url=team/update/5       → TeamController::update(5)      – uloží změny týmu č.5
+  ?url=team/delete/5       → TeamController::delete(5)      – smaže tým č.5
+  ?url=team/show/5         → TeamController::show(5)        – detail týmu č.5
+  ?url=auth/login          → AuthController::login()        – přihlašovací stránka
+  ?url=auth/authenticate   → AuthController::authenticate() – zpracuje přihlášení
+  ?url=auth/register       → AuthController::register()     – registrační stránka
+  ?url=auth/storeUser      → AuthController::storeUser()    – uloží nového uživatele
+  ?url=auth/logout         → AuthController::logout()       – odhlásí uživatele
+  ?url=user/index          → UserController::index()        – seznam uživatelů
+  ?url=user/show/3         → UserController::show(3)        – profil uživatele č.3
+  ?url=user/edit/3         → UserController::edit(3)        – formulář upravit profil
+  ?url=user/update/3       → UserController::update(3)      – uloží změny profilu
+  ?url=user/delete/3       → UserController::delete(3)      – smaže uživatele č.3
+  ?url=user/addComment/3   → UserController::addComment(3)  – přidá komentář k profilu
+  ?url=user/editComment/7  → UserController::editComment(7) – formulář upravit komentář
+  ?url=user/updateComment/7 → UserController::updateComment(7) – uloží komentář
+  ?url=user/deleteComment/7 → UserController::deleteComment(7) – smaže komentář
+
+
+Pokud není zadána žádná URL, výchozí je TeamController::index()
+(seznam mých oblíbených týmů).
+
+
+================================================================================
+4. DATABÁZE
+================================================================================
+
+Název databáze: wa_2026_vk_01
+Systém: MySQL / MariaDB
+Připojení: localhost, uživatel root, bez hesla (lokální XAMPP)
+
+----- Tabulka: users -----
+
+  id          INT, auto-increment, primární klíč
+  username    VARCHAR(100) – uživatelské jméno
+  email       VARCHAR(150) – e-mail (musí být unikátní)
+  password    VARCHAR(255) – zahashované heslo (bcrypt)
+  first_name  VARCHAR(100) – křestní jméno (volitelné)
+  last_name   VARCHAR(100) – příjmení (volitelné)
+  nickname    VARCHAR(100) – přezdívka (volitelné)
+  role        ENUM('user', 'admin') – výchozí 'user'
+  created_at  TIMESTAMP – datum registrace (vyplní DB automaticky)
+
+----- Tabulka: favorite_teams -----
+
+  id            INT, auto-increment, primární klíč
+  user_id       INT – cizí klíč → users.id (ON DELETE CASCADE)
+  team_name     VARCHAR(200) – název fotbalového klubu
+  country       VARCHAR(100) – země původu klubu
+  league        VARCHAR(150) – název ligy
+  founded_year  INT – rok založení klubu
+  description   TEXT – poznámka / proč je to oblíbený tým
+  created_at    TIMESTAMP – datum přidání
+
+  ON DELETE CASCADE znamená: pokud se smaže uživatel, smažou se i jeho týmy.
+
+----- Tabulka: user_comments -----
+
+  id            INT, auto-increment, primární klíč
+  profile_id    INT – cizí klíč → users.id (profil, ke kterému komentář patří)
+  author_id     INT – cizí klíč → users.id (kdo komentář napsal)
+  comment_text  TEXT – text komentáře
+  created_at    TIMESTAMP – datum přidání
+  updated_at    TIMESTAMP – datum poslední úpravy (NULL pokud neupraveno)
+
+  Oba cizí klíče mají ON DELETE CASCADE – smazání uživatele smaže i jeho komentáře.
+
+
+================================================================================
+5. PŘIPOJENÍ K DATABÁZI – Database.php (Model)
+================================================================================
+
+Třída Database obsahuje metodu getConnection().
+Tato metoda vytváří připojení k databázi pomocí PDO.
+
+PDO = PHP Data Objects – bezpečné rozhraní pro práci s DB.
+
+Výhody PDO:
+  - Používá prepared statements → ochrana před SQL Injection
+  - Funguje s MySQL, PostgreSQL, SQLite... (přenositelné)
+
+Nastavení:
+  PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+  → Při chybě v SQL dotazu PDO hodí výjimku (PDOException), místo tichého selhání.
+
+Každý Model (User, Team, Comment) si v konstruktoru vytváří vlastní instanci Database
+a ukládá připojení do $this->conn.
+
+
+================================================================================
+6. MODEL – User.php
+================================================================================
+
+Třída User obsahuje metody pro práci s tabulkou "users".
+
+  register($username, $email, $password, ...)
+    → Zkontroluje, zda email již neexistuje (findByEmail).
+    → Zahashuje heslo pomocí password_hash(PASSWORD_DEFAULT) – bcrypt.
+    → Vloží nový řádek do tabulky users.
+    → Vrátí true/false.
+
+  findByEmail($email)
+    → Vrátí celý řádek uživatele (SELECT *) nebo false.
+    → Používá se při přihlášení a kontrole duplicity emailu.
+
+  findById($id)
+    → Vrátí konkrétního uživatele podle ID.
+    → Vrací: id, username, email, first_name, last_name, nickname, role, created_at.
+    → NEVRACÍ heslo (bezpečnost).
+
+  getAll()
+    → Vrátí všechny uživatele seřazené podle username.
+    → Vrací i sloupec role (pro zobrazení ADMIN badge).
+
+  update($id, $username, $email, $firstName, $lastName, $nickname)
+    → Zkontroluje, zda email nepoužívá jiný uživatel.
+    → Pokud ano → vrátí false (e-mail je obsazen).
+    → Jinak provede UPDATE.
+
+  updatePassword($id, $newPassword)
+    → Zahashuje nové heslo a uloží do DB.
+    → Volá se samostatně – jen pokud uživatel vyplní pole nového hesla.
+
+  delete($id)
+    → Smaže uživatele z DB. Kaskádově se smažou i jeho týmy a komentáře.
+    → Smí volat pouze admin (kontrola v controlleru).
+
+
+================================================================================
+7. MODEL – Team.php
+================================================================================
+
+Třída Team obsahuje metody pro práci s tabulkou "favorite_teams".
+
+  create($data, $userId)
+    → Vloží nový oblíbený tým do DB pro daného uživatele.
+
+  getAllByUser($userId)
+    → Vrátí všechny týmy daného uživatele (WHERE user_id = ...).
+    → Seřazeno od nejnovějšího (ORDER BY created_at DESC).
+
+  getById($id)
+    → Vrátí jeden tým podle ID. Vrací i user_id (pro kontrolu vlastnictví).
+
+  update($id, $data)
+    → Aktualizuje údaje o týmu (team_name, country, league, ...).
+
+  delete($id)
+    → Smaže tým z DB.
+
+
+================================================================================
+8. MODEL – Comment.php
+================================================================================
+
+Třída Comment pracuje s tabulkou "user_comments".
+
+  create($profileId, $authorId, $text)
+    → Uloží komentář k profilu uživatele.
+    → Text je nejprve očištěn: htmlspecialchars + strip_tags.
+    → profileId = ID uživatele, jehož profil se hodnotí.
+    → authorId  = ID přihlášeného uživatele, který píše.
+
+  getByProfile($profileId)
+    → Vrátí všechny komentáře pro daný profil.
+    → JOIN s tabulkou users → přidá ke každému komentáři jméno a username autora.
+    → Seřazeno od nejnovějšího.
+
+  findById($id)
+    → Vrátí jeden komentář podle ID.
+    → Používá se při mazání a editaci – pro ověření, kdo komentář napsal.
+
+  update($id, $text)
+    → Aktualizuje text komentáře. Text je znovu očištěn.
+
+  deleteById($id)
+    → Smaže komentář podle ID.
+
+
+================================================================================
+9. CONTROLLER – AuthController.php
+================================================================================
+
+Spravuje přihlašování, registraci a odhlášení.
+
+  register()
+    → Zobrazí registrační formulář (views/auth/register.php).
+
+  storeUser()
+    → Zpracuje POST data z registračního formuláře.
+    → Validace:
+        - username, email, password jsou povinné
+        - Heslo min. 8 znaků
+        - Heslo musí obsahovat alespoň 1 velké písmeno
+        - Heslo musí obsahovat alespoň 1 speciální znak (!@#$...)
+        - Hesla se musí shodovat
+    → Zavolá User::register() → uloží do DB.
+    → Přesměruje na přihlášení.
+
+  login()
+    → Zobrazí přihlašovací formulář (views/auth/login.php).
+
+  authenticate()
+    → Zpracuje POST data z přihlašovacího formuláře.
+    → Najde uživatele v DB podle emailu (findByEmail).
+    → Ověří heslo pomocí password_verify($entered, $hashed).
+      password_verify = porovná zadané heslo s bcrypt hashem v DB.
+    → Pokud OK: uloží do $_SESSION:
+        $_SESSION['user_id']   = ID uživatele
+        $_SESSION['user_name'] = přezdívka nebo username
+        $_SESSION['user_role'] = 'user' nebo 'admin'
+    → Pokud CHYBA: vrátí obecnou chybovou zprávu (neřekne, co bylo špatně).
+
+  logout()
+    → Smaže user_id, user_name a user_role ze $_SESSION.
+    → Přesměruje na úvodní stránku.
+
+SESSION = dočasné úložiště dat na serveru. Je vázáno na konkrétního prohlížeče
+pomocí cookie. Existuje dokud uživatel nezavře prohlížeč nebo se neodhlásí.
+
+
+================================================================================
+10. CONTROLLER – TeamController.php
+================================================================================
+
+Spravuje CRUD operace s oblíbenými fotbalovými týmy.
+
+  index()
+    → Vyžaduje přihlášení (jinak redirect na login).
+    → Načte všechny týmy přihlášeného uživatele z DB.
+    → Zobrazí views/teams/index.php.
+
+  create()
+    → Vyžaduje přihlášení.
+    → Zobrazí prázdný formulář (views/teams/create.php).
+
+  store()
+    → Zpracuje POST data z formuláře (create).
+    → Validace: team_name je povinný.
+    → Zavolá Team::create() → uloží do DB.
+    → Přesměruje na seznam týmů.
+
+  show($id)
+    → Najde tým podle $id.
+    → Zobrazí detail (views/teams/show.php).
+    → Pokud tým neexistuje → chyba + redirect.
+
+  edit($id)
+    → Vyžaduje přihlášení.
+    → Ověří vlastnictví: tým musí patřit přihlášenému uživateli.
+    → Zobrazí formulář předvyplněný daty (views/teams/edit.php).
+
+  update($id)
+    → Zpracuje POST data z formuláře (edit).
+    → Ověří vlastnictví týmu (uživatel nemůže upravit cizí tým).
+    → Zavolá Team::update() → uloží do DB.
+
+  delete($id)
+    → Ověří vlastnictví týmu.
+    → Zavolá Team::delete() → smaže z DB.
+    → Přesměruje na seznam.
+
+DŮLEŽITÉ: Každý uživatel vidí a spravuje pouze své vlastní týmy.
+Ověření: team['user_id'] == $_SESSION['user_id']
+
+
+================================================================================
+11. CONTROLLER – UserController.php
+================================================================================
+
+Nejkomplexnější controller. Spravuje uživatele, profily a komentáře.
+
+  index()
+    → Vyžaduje přihlášení (seznam uživatelů je jen pro přihlášené).
+    → Načte všechny uživatele z DB.
+    → Zobrazí views/users/index.php.
+
+  show($id)
+    → Zobrazí profil uživatele č. $id.
+    → Načte uživatele, jeho týmy a komentáře na jeho profilu.
+    → Zobrazí views/users/show.php.
+
+  edit($id)
+    → Vyžaduje přihlášení.
+    → Smí editovat: vlastní profil NEBO admin (může editovat kohokoliv).
+    → Zobrazí formulář (views/users/edit.php).
+
+  update($id)
+    → Zpracuje POST data z editačního formuláře.
+    → Aktualizuje: username, email, first_name, last_name, nickname.
+    → Heslo: aktualizuje se pouze pokud je vyplněno pole "nové heslo".
+      Validace hesla je stejná jako při registraci.
+    → Po úspěchu přesměruje na profil.
+
+  delete($id)
+    → POUZE ADMIN.
+    → Admin nemůže smazat sám sebe (ochrana před sebezničením).
+    → Smaže uživatele + kaskádově jeho týmy a komentáře.
+    → Přesměruje na seznam uživatelů.
+
+  addComment($profileId)
+    → Vyžaduje přihlášení.
+    → Nelze hodnotit vlastní profil.
+    → Uživatel smí přidat MAX. 1 komentář na každý profil.
+      (Kontrola: prochází existující komentáře a hledá author_id == user_id)
+    → Uloží komentář přes Comment::create().
+
+  editComment($commentId)
+    → Zobrazí formulář pro editaci komentáře.
+    → Smí pouze autor komentáře (author_id == user_id).
+
+  updateComment($commentId)
+    → Zpracuje POST data z editačního formuláře komentáře.
+    → Ověří, že edituje autor.
+    → Uloží přes Comment::update().
+
+  deleteComment($commentId)
+    → POUZE ADMIN.
+    → Admin může smazat jakýkoli komentář.
+    → Přesměruje zpět na profil, u kterého byl komentář.
+
+
+================================================================================
+12. SYSTÉM ROLÍ A OPRÁVNĚNÍ (AUTORIZACE)
+================================================================================
+
+Aplikace má dva typy uživatelů:
+
+  NEPŘIHLÁŠENÝ uživatel:
+    - Může vidět: přihlašovací formulář, registraci, detail týmu
+    - NEMŮŽE: nic jiného
+
+  PŘIHLÁŠENÝ uživatel (role = 'user'):
+    - Může vidět: svůj seznam týmů, seznam uživatelů, profily ostatních
+    - Může přidat: tým, komentář (1 na profil, ne svůj vlastní)
+    - Může upravit: své týmy, svůj profil, svůj komentář
+    - Může smazat: své týmy
+    - NEMŮŽE: mazat komentáře, mazat jiné uživatele
+
+  ADMIN (role = 'admin'):
+    - Vše co normální uživatel PLUS:
+    - Může mazat: jakékoli komentáře
+    - Může mazat: jakéhokoli uživatele (kromě sebe)
+    - Může editovat: jakýkoli profil
+
+Kde se role ukládá?
+  1. V databázi: sloupec role v tabulce users (ENUM 'user'/'admin')
+  2. V session: $_SESSION['user_role'] (nastaví se při přihlášení)
+
+Jak se kontroluje:
+  $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
+
+  Operátor ?? = null coalescing = pokud user_role není nastaveno, použij ''.
+  Výsledek: $isAdmin je true nebo false.
+
+
+================================================================================
+13. BEZPEČNOST APLIKACE
+================================================================================
+
+  1. SQL Injection ochrana
+     → Všechny SQL dotazy používají prepared statements (PDO).
+     → Data se nikdy nevkládají přímo do SQL řetězce.
+     Příklad:
+       $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
+       $stmt->execute([':email' => $email]);
+     → Databáze zpracuje :email jako data, ne jako SQL kód.
+
+  2. XSS ochrana (Cross-Site Scripting)
+     → Všechna data vypisovaná do HTML jsou ošetřena pomocí htmlspecialchars().
+       Tato funkce převede < > " ' & na HTML entity, čímž znemožní vložení skriptu.
+     → Text komentářů je navíc čištěn přes strip_tags() – odstraní HTML tagy.
+
+  3. Hashování hesel
+     → Hesla se NIKDY neukládají v čitelné podobě.
+     → password_hash($password, PASSWORD_DEFAULT) → bcrypt hash (60 znaků)
+     → Při přihlášení: password_verify($entered, $hash) – porovná bez dešifrování.
+     → I kdyby někdo ukradl databázi, hesla nezná.
+
+  4. Session bezpečnost
+     → Autentizace a autorizace probíhá výhradně přes $_SESSION.
+     → Session se spouští v public/index.php pomocí session_start().
+     → Při odhlášení se session data smažou (unset).
+
+  5. Kontrola vlastnictví
+     → Před každou destruktivní akcí (edit, delete) se ověřuje,
+       zda přihlášený uživatel vlastní daný záznam.
+     → Příklad: $team['user_id'] != $_SESSION['user_id'] → přístup zamítnut.
+
+  6. CSRF omezení
+     → Destruktivní akce (smazání) vyžadují potvrzení přes JavaScript confirm().
+     → Editace a uložení probíhají přes POST metodu (ne GET).
+
+
+================================================================================
+14. VIEWS – ŠABLONY (ZOBRAZENÍ)
+================================================================================
+
+header.php
+  → Vloží se na začátek každé stránky (require_once).
+  → Obsahuje: <head> s CSS linkem, navigaci, logo.
+  → Zobrazuje systémové zprávy (success/error/notice) ze session.
+  → Navigace se mění podle stavu přihlášení:
+    - Přihlášen: jméno (odkaz na profil) + ADMIN badge + tlačítko Odhlásit
+    - Nepřihlášen: Přihlásit + Registrace
+
+footer.php
+  → Vloží se na konec každé stránky.
+  → Obsahuje copyright s aktuálním rokem (date('Y')).
+  → Uzavírá HTML strukturu (</div></body></html>).
+
+Systémové zprávy (flash messages)
+  → Controller přidá zprávu do $_SESSION['messages']['success/error/notice'].
+  → Header.php ji zobrazí a okamžitě vymaže z session.
+  → Zpráva se zobrazí pouze jednou, pak zmizí.
+
+
+================================================================================
+15. FORMULÁŘE A DATA
+================================================================================
+
+Jak probíhá přidání týmu (příklad celého cyklu):
+
+  1. Uživatel klikne "Přidat tým"
+       → URL: ?url=team/create
+       → App.php zavolá TeamController::create()
+       → Zobrazí se prázdný HTML formulář (views/teams/create.php)
+
+  2. Uživatel vyplní formulář a klikne "Uložit"
+       → Formulář odešle POST na ?url=team/store
+       → App.php zavolá TeamController::store()
+
+  3. TeamController::store():
+       → Zkontroluje, zda je uživatel přihlášen
+       → Načte data z $_POST (team_name, country, liga, rok, popis)
+       → Validuje: team_name nesmí být prázdný
+       → Zavolá $teamModel->create($data, $_SESSION['user_id'])
+       → Team::create() provede INSERT do favorite_teams
+       → Přidá success zprávu do session
+       → Přesměruje na seznam týmů (?url=team/index)
+
+  4. Uživatel vidí seznam s novým týmem a zprávou "Tým byl přidán"
+
+
+================================================================================
+16. PŘIHLÁŠENÍ A SESSION – JAK TO FUNGUJE
+================================================================================
+
+Krok za krokem:
+
+  1. Uživatel vyplní email + heslo a odešle formulář.
+
+  2. AuthController::authenticate() spustí se.
+
+  3. findByEmail($email) → SQL: SELECT * FROM users WHERE email = ?
+     → Vrátí celý řádek uživatele nebo false.
+
+  4. password_verify($zadane_heslo, $hash_z_db)
+     → PHP bcrypt algoritmus porovná heslo s hashem.
+     → Pokud nesouhlasí → chybová zpráva, redirect na login.
+
+  5. Pokud souhlasí:
+     $_SESSION['user_id']   = 5        (číslo z databáze)
+     $_SESSION['user_name'] = "FanFC"  (přezdívka nebo username)
+     $_SESSION['user_role'] = "user"   (nebo "admin")
+
+  6. Redirect na hlavní stránku.
+
+  7. Na každé další stránce:
+     → header.php zkontroluje isset($_SESSION['user_id'])
+     → Pokud existuje → uživatel je přihlášen → zobrazí menu
+
+  8. Odhlášení:
+     unset($_SESSION['user_id'])
+     unset($_SESSION['user_name'])
+     unset($_SESSION['user_role'])
+     → Session data jsou smazána, uživatel je "cizí"
+
+
+================================================================================
+17. ADMIN ÚČET
+================================================================================
+
+  E-mail: vojtikkaniok@seznam.cz
+  Heslo:  Vojta2006+
+  Role:   admin
+
+  Admin byl vytvořen pomocí setup_admin.php který:
+    1. Přidal sloupec 'role' do tabulky users (SHOW COLUMNS kontrola)
+    2. Přidal sloupec 'updated_at' do user_comments
+    3. Vytvořil/aktualizoval admin účet s hashovaným heslem
+
+  ADMIN MŮŽE:
+    - Smazat jakéhokoli uživatele (kromě sebe)
+    - Smazat jakýkoli komentář
+    - Editovat jakýkoli profil
+    - Vše co normální uživatel
+
+
+================================================================================
+18. PRAVIDLA KOMENTÁŘŮ
+================================================================================
+
+  Kdo může přidat komentář?
+    → Přihlášený uživatel na CIZÍ profil.
+    → Na vlastní profil komentář přidat nelze.
+    → Každý uživatel může přidat MAX. 1 komentář na každý profil.
+
+  Kdo může editovat komentář?
+    → Pouze autor komentáře (author_id == user_id).
+
+  Kdo může smazat komentář?
+    → POUZE ADMIN.
+
+  Jak se pozná, že byl komentář upravován?
+    → Sloupec updated_at se automaticky aktualizuje při UPDATE.
+    → V profilu se zobrazuje "· upraveno" u upraveného komentáře.
+
+
+================================================================================
+19. KLÍČOVÉ PHP FUNKCE POUŽITÉ V APLIKACI
+================================================================================
+
+  password_hash($heslo, PASSWORD_DEFAULT)
+    → Zahashuje heslo pomocí bcrypt algoritmu.
+    → Výsledek je vždy jiný řetězec (salt je náhodný), ale verify vždy funguje.
+
+  password_verify($zadane, $hash)
+    → Ověří, zda zadané heslo odpovídá uloženému hashi.
+    → Vrátí true nebo false.
+
+  htmlspecialchars($text)
+    → Převede nebezpečné znaky na HTML entity.
+    → Zabrání XSS útoku.
+    → < se stane &lt;, > se stane &gt; atd.
+
+  session_start()
+    → Spustí nebo obnoví session. Musí být první věc v PHP.
+
+  header('Location: URL')
+    → Přesměruje prohlížeč na jinou adresu.
+    → Po redirect se musí zavolat exit; jinak PHP pokračuje dál.
+
+  require_once 'soubor.php'
+    → Vloží PHP soubor. Pokud neexistuje → fatální chyba.
+    → require_once = vloží max. jednou (zabrání duplicitám).
+
+  PDO::prepare() + execute()
+    → Bezpečné provedení SQL dotazu s parametry.
+
+  date('Y')
+    → Vrátí aktuální rok (pro copyright v patičce).
+
+  isset($promenna)
+    → Zkontroluje, zda proměnná existuje a není null.
+
+  empty($promenna)
+    → Zkontroluje, zda je proměnná prázdná (null, '', 0, [], false).
+
+  trim($text)
+    → Odstraní mezery na začátku a konci řetězce.
+
+  strip_tags($text)
+    → Odstraní všechny HTML tagy z textu.
+
+  preg_match('/vzor/', $text)
+    → Zkontroluje, zda text odpovídá regulárnímu výrazu.
+    → Použito pro validaci hesla (velké písmeno, speciální znak).
+
+  mb_strimwidth($text, 0, 100, '...')
+    → Zkrátí text na 100 znaků a přidá "..." (mb = multibyte = podpora UTF-8).
+
+  nl2br($text)
+    → Převede konce řádků (\n) na HTML <br> tagy.
+    → Používá se při výpisu komentářů.
+
+  htmlspecialchars(addslashes($text))
+    → addslashes escapuje apostrofy v JavaScriptu (pro confirm dialog).
+
+
+================================================================================
+20. SHRNUTÍ – CO APLIKACE UMOŽŇUJE
+================================================================================
+
+  NEREGISTROVANÝ UŽIVATEL:
+    - Vidí přihlašovací a registrační stránku
+    - Může se zaregistrovat
+
+  REGISTROVANÝ UŽIVATEL:
+    - Spravuje svůj seznam oblíbených fotbalových klubů (CRUD)
+    - Vidí seznam ostatních uživatelů
+    - Vidí profily ostatních uživatelů a jejich týmy
+    - Může přidat 1 komentář na každý cizí profil
+    - Může editovat svůj komentář
+    - Může editovat svůj profil (jméno, email, heslo)
+
+  ADMIN:
+    - Vše výše zmíněné PLUS
+    - Může smazat komentáře
+    - Může smazat uživatele (kaskádově se smažou i jejich týmy a komentáře)
+    - Může editovat jakýkoli profil
+
+================================================================================
+  Vojtěch Kaniok – Webové Aplikace 2026
+================================================================================
