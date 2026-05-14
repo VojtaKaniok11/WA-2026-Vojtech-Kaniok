@@ -6,44 +6,31 @@ class Team {
     private $table_name = "favorite_teams";
 
     public function __construct() {
-        // Vytvoříme instanci připojení k databázi
         $database = new Database();
         $this->conn = $database->getConnection();
     }
 
-    /**
-     * Vložení nového oblíbeného týmu do databáze
-     */
     public function create($data, $userId) {
-        $query = "INSERT INTO " . $this->table_name . " 
-                 (team_name, country, league, founded_year, description, user_id) 
-                 VALUES 
-                 (:team_name, :country, :league, :founded_year, :description, :user_id)";
-        
+        $query = "INSERT INTO " . $this->table_name . "
+                 (team_name, country, league, founded_year, description, image, user_id)
+                 VALUES
+                 (:team_name, :country, :league, :founded_year, :description, :image, :user_id)";
+
         $stmt = $this->conn->prepare($query);
 
-        // Očištění dat
-        $clean_data = array_map(function($item) {
-            return htmlspecialchars(strip_tags($item));
-        }, $data);
+        $clean = array_map(fn($v) => htmlspecialchars(strip_tags((string)$v)), $data);
 
-        $stmt->bindParam(":team_name", $clean_data['team_name']);
-        $stmt->bindParam(":country", $clean_data['country']);
-        $stmt->bindParam(":league", $clean_data['league']);
-        $stmt->bindParam(":founded_year", $clean_data['founded_year']);
-        $stmt->bindParam(":description", $clean_data['description']);
-        $stmt->bindParam(":user_id", $userId);
+        $stmt->bindParam(':team_name',    $clean['team_name']);
+        $stmt->bindParam(':country',      $clean['country']);
+        $stmt->bindParam(':league',       $clean['league']);
+        $stmt->bindParam(':founded_year', $clean['founded_year']);
+        $stmt->bindParam(':description',  $clean['description']);
+        $stmt->bindParam(':image',        $data['image']);
+        $stmt->bindParam(':user_id',      $userId);
 
-        if($stmt->execute()) {
-            return true;
-        }
-
-        return false;
+        return $stmt->execute();
     }
 
-    /**
-     * Získání všech oblíbených týmů konkrétního uživatele
-     */
     public function getAllByUser($userId) {
         $query = "SELECT * FROM " . $this->table_name . " WHERE user_id = :user_id ORDER BY created_at DESC";
         $stmt = $this->conn->prepare($query);
@@ -52,20 +39,17 @@ class Team {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Získání jednoho týmu podle ID
-     */
     public function getById($id) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE id = :id";
+        $query = "SELECT ft.*, u.username AS updated_by_name
+                  FROM " . $this->table_name . " ft
+                  LEFT JOIN users u ON ft.updated_by = u.id
+                  WHERE ft.id = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Smazání záznamu podle ID
-     */
     public function delete($id) {
         $query = "DELETE FROM " . $this->table_name . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
@@ -73,27 +57,36 @@ class Team {
         return $stmt->execute();
     }
 
-    /**
-     * Úprava existujícího záznamu týmu
-     */
-    public function update($id, $data) {
-        $query = "UPDATE " . $this->table_name . " SET 
-                  team_name = :team_name, country = :country, league = :league, 
-                  founded_year = :founded_year, description = :description 
-                  WHERE id = :id";
-        
+    public function update($id, $data, $updatedBy, ?string $image = null) {
+        if ($image !== null) {
+            $query = "UPDATE " . $this->table_name . " SET
+                      team_name = :team_name, country = :country, league = :league,
+                      founded_year = :founded_year, description = :description,
+                      image = :image, updated_by = :updated_by
+                      WHERE id = :id";
+        } else {
+            $query = "UPDATE " . $this->table_name . " SET
+                      team_name = :team_name, country = :country, league = :league,
+                      founded_year = :founded_year, description = :description,
+                      updated_by = :updated_by
+                      WHERE id = :id";
+        }
+
         $stmt = $this->conn->prepare($query);
 
-        $clean_data = array_map(function($item) {
-            return htmlspecialchars(strip_tags($item));
-        }, $data);
+        $clean = array_map(fn($v) => htmlspecialchars(strip_tags((string)$v)), $data);
 
-        $stmt->bindParam(":team_name", $clean_data['team_name']);
-        $stmt->bindParam(":country", $clean_data['country']);
-        $stmt->bindParam(":league", $clean_data['league']);
-        $stmt->bindParam(":founded_year", $clean_data['founded_year']);
-        $stmt->bindParam(":description", $clean_data['description']);
-        $stmt->bindParam(":id", $id);
+        $stmt->bindParam(':team_name',    $clean['team_name']);
+        $stmt->bindParam(':country',      $clean['country']);
+        $stmt->bindParam(':league',       $clean['league']);
+        $stmt->bindParam(':founded_year', $clean['founded_year']);
+        $stmt->bindParam(':description',  $clean['description']);
+        $stmt->bindParam(':updated_by',   $updatedBy);
+        $stmt->bindParam(':id',           $id);
+
+        if ($image !== null) {
+            $stmt->bindParam(':image', $image);
+        }
 
         return $stmt->execute();
     }

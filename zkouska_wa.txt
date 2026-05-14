@@ -144,6 +144,8 @@ Připojení: localhost, uživatel root, bez hesla (lokální XAMPP)
   league        VARCHAR(150) – název ligy
   founded_year  INT – rok založení klubu
   description   TEXT – poznámka / proč je to oblíbený tým
+  image         VARCHAR(255) – název souboru obrázku/loga týmu (volitelné)
+  updated_by    INT – ID uživatele, který tým naposledy upravil (auditní stopa)
   created_at    TIMESTAMP – datum přidání
 
   ON DELETE CASCADE znamená: pokud se smaže uživatel, smažou se i jeho týmy.
@@ -228,16 +230,22 @@ Třída Team obsahuje metody pro práci s tabulkou "favorite_teams".
 
   create($data, $userId)
     → Vloží nový oblíbený tým do DB pro daného uživatele.
+    → Ukládá i volitelný obrázek (název souboru z $data['image']).
 
   getAllByUser($userId)
     → Vrátí všechny týmy daného uživatele (WHERE user_id = ...).
     → Seřazeno od nejnovějšího (ORDER BY created_at DESC).
 
   getById($id)
-    → Vrátí jeden tým podle ID. Vrací i user_id (pro kontrolu vlastnictví).
+    → Vrátí jeden tým podle ID.
+    → LEFT JOIN s tabulkou users → přidá sloupec updated_by_name
+      (username uživatele, který tým naposledy upravil).
 
-  update($id, $data)
+  update($id, $data, $updatedBy, $image = null)
     → Aktualizuje údaje o týmu (team_name, country, league, ...).
+    → Uloží ID přihlášeného uživatele do sloupce updated_by (auditní stopa).
+    → Pokud je předán nový obrázek ($image != null), aktualizuje i sloupec image.
+    → Pokud $image == null, obrázek se NEMĚNÍ (ochrana stávajícího souboru).
 
   delete($id)
     → Smaže tým z DB.
@@ -612,7 +620,78 @@ Krok za krokem:
 
 
 ================================================================================
-19. KLÍČOVÉ PHP FUNKCE POUŽITÉ V APLIKACI
+19. NAHRÁVÁNÍ OBRÁZKŮ (FILE UPLOAD)
+================================================================================
+
+Uživatel může přidat logo nebo fotku ke každému svému oblíbenému týmu.
+Obrázek se zobrazuje v detailu týmu i v kartách na profilu uživatele.
+
+Jak to funguje technicky:
+
+  1. Formulář musí mít atribut enctype="multipart/form-data"
+     → Bez tohoto atributu se soubor do PHP vůbec nepošle.
+     → Soubor je dostupný přes superglobální proměnnou $_FILES.
+
+  2. $_FILES['team_image'] obsahuje:
+     - name     = původní název souboru na počítači uživatele
+     - tmp_name = dočasná cesta na serveru, kam PHP soubor uložilo
+     - size     = velikost v bytech
+     - type     = MIME typ hlášený prohlížečem (NEDŮVĚRYHODNÉ – lze podvrhnout)
+     - error    = kód chyby (0 = OK)
+
+  3. Ověření MIME typu bezpečně:
+     $finfo = finfo_open(FILEINFO_MIME_TYPE);
+     $mimeType = finfo_file($finfo, $file['tmp_name']);
+     → finfo čte skutečný obsah souboru, ne jen příponu nebo $_FILES['type'].
+     → Útočník nemůže podvrhnout typ souboru.
+
+  4. Generování názvu souboru:
+     'team_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext
+     → time() = aktuální Unix timestamp (zabrání konfliktům názvů)
+     → bin2hex(random_bytes(4)) = 8 náhodných hex znaků (extra bezpečnost)
+     → Výsledek: např. "team_1747123456_a3f82c1d.jpg"
+
+  5. move_uploaded_file($tmp, $destination)
+     → Přesune soubor z dočasného místa do složky public/uploads/teams/.
+     → PHP tuto funkci bezpečně ověří, že soubor byl opravdu nahrán (ne podvod).
+
+  Ochrana stávajícího obrázku při editaci:
+     → Team::update() dostane $image = null pokud žádný soubor nebyl nahrán.
+     → SQL dotaz pak neobsahuje SET image = ..., sloupec zůstane nezměněn.
+     → Starý obrázek se smaže z disku až při nahrání nového (unlink()).
+
+  Smazání obrázku při smazání týmu:
+     → TeamController::delete() nejprve načte tým a ověří cestu k obrázku.
+     → file_exists() + unlink() = smaže soubor z disku.
+     → Pak teprve smaže záznam z DB.
+
+
+================================================================================
+20. AUDITNÍ STOPA – updated_by
+================================================================================
+
+Každý tým má sloupec updated_by (INT, nullable).
+Při každé úpravě týmu se tam uloží ID přihlášeného uživatele.
+
+  Kde se to nastavuje: TeamController::update()
+    → $teamModel->update($id, $data, $_SESSION['user_id'], $uploadedImage)
+    → Třetí argument = ID editujícího uživatele.
+
+  Kde se to ukládá: Team::update()
+    → SQL: SET ... updated_by = :updated_by ... WHERE id = :id
+
+  Jak se zobrazuje: Team::getById()
+    → LEFT JOIN users u ON ft.updated_by = u.id
+    → Vrátí sloupec updated_by_name = username editujícího uživatele.
+    → V teams/show.php: "Naposledy upravil: @username"
+
+  Proč LEFT JOIN (a ne INNER JOIN)?
+    → LEFT JOIN vrátí tým i když updated_by je NULL (tým ještě nebyl editován).
+    → INNER JOIN by vrátil prázdný výsledek, pokud updated_by = NULL.
+
+
+================================================================================
+21. KLÍČOVÉ PHP FUNKCE POUŽITÉ V APLIKACI
 ================================================================================
 
   password_hash($heslo, PASSWORD_DEFAULT)
@@ -673,7 +752,7 @@ Krok za krokem:
 
 
 ================================================================================
-20. SHRNUTÍ – CO APLIKACE UMOŽŇUJE
+22. SHRNUTÍ – CO APLIKACE UMOŽŇUJE
 ================================================================================
 
   NEREGISTROVANÝ UŽIVATEL:

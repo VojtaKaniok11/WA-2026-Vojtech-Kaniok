@@ -26,6 +26,8 @@ CREATE TABLE `favorite_teams` (
   `league` VARCHAR(150) DEFAULT NULL,
   `founded_year` INT DEFAULT NULL,
   `description` TEXT DEFAULT NULL,
+  `image` VARCHAR(255) DEFAULT NULL,
+  `updated_by` INT DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT `fk_teams_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

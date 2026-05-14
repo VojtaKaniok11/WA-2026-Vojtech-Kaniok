@@ -46,6 +46,13 @@ $isOwnProfile = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (in
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
             <?php foreach ($teams as $t): ?>
                 <div class="card" style="background: var(--bg-surface); border-color: rgba(255,255,255,0.05); animation: none;">
+                    <?php if (!empty($t['image'])): ?>
+                        <div style="margin: -1.5rem -1.5rem 1rem -1.5rem; border-radius: 12px 12px 0 0; overflow: hidden; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; padding: 1rem; height: 110px;">
+                            <img src="<?= $baseUrl ?>/uploads/teams/<?= htmlspecialchars($t['image']) ?>"
+                                 alt="Logo <?= htmlspecialchars($t['team_name']) ?>"
+                                 style="max-height: 90px; max-width: 100%; object-fit: contain;">
+                        </div>
+                    <?php endif; ?>
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                         <h4 style="margin: 0; color: var(--accent); font-size: 1.2rem;">
                             <?= htmlspecialchars($t['team_name']) ?>

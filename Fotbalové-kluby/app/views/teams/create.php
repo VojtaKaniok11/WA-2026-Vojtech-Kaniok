@@ -9,7 +9,7 @@
                 <a href="?url=team/index" class="btn btn-secondary">← Zpět na seznam</a>
             </div>
 
-            <form action="?url=team/store" method="post">
+            <form action="?url=team/store" method="post" enctype="multipart/form-data">
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="team_name">Název klubu <span>*</span></label>
@@ -27,11 +27,20 @@
                         <label for="founded_year">Rok založení</label>
                         <input type="number" id="founded_year" name="founded_year" placeholder="např. 1899" min="1800" max="2099">
                     </div>
-                    
+
                     <div class="form-group full-width">
                         <label for="description">Poznámka / Proč je to váš oblíbený tým?</label>
-                        <textarea id="description" name="description" rows="5" placeholder="Napište, proč tento klub milujete..."></textarea>
-                    </div>    
+                        <textarea id="description" name="description" rows="4" placeholder="Napište, proč tento klub milujete..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="team_image">Logo nebo fotka týmu</label>
+                        <input type="file" id="team_image" name="team_image" accept="image/jpeg,image/png,image/gif,image/webp"
+                               style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem; color: var(--text-main); width: 100%; cursor: pointer;">
+                        <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.3rem; display: block;">
+                            Povolené formáty: JPG, PNG, GIF, WEBP · Max. velikost: 5 MB · Nepovinné
+                        </small>
+                    </div>
                 </div>
 
                 <div class="form-actions">
